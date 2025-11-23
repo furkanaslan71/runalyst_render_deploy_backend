@@ -26,6 +26,7 @@ def create_run_record(
             user_id=current_user.id
         )
 
+
         db.add(new_run)
         db.commit()
         db.refresh(new_run)
