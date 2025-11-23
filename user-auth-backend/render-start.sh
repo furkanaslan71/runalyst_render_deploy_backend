@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# Exit on first error
+# This script is now the ENTRYPOINT of the container.
+# It runs the migrations and then starts the Gunicorn server.
+
+# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Run database migrations
 echo "Running database migrations..."
 alembic upgrade head
 
-# The Dockerfile's CMD will run next, starting the Gunicorn server.
-# The line below is not strictly needed as Render will execute the CMD,
-# but it's good for clarity if you were to run this script manually.
-echo "Migrations complete. Starting server..."
+echo "Migrations complete. Starting Gunicorn server..."
+# This is the final command. It will start the web server, and the script
+# will continue to run as long as the server is running.
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:${PORT}
