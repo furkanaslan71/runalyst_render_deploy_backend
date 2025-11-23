@@ -22,5 +22,6 @@ class Run(Base):
     # Foreign key to link this run to a user
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
+    status = Column(String, default="pending", nullable=False)
     # Establish the relationship to the User model
     owner = relationship("User", back_populates="runs")

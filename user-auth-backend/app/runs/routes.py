@@ -7,9 +7,6 @@ from app.models.user import User
 from app.models.run import Run
 from .schemas import RunCreateIn, RunOut
 
-from app.core.queue import queue
-from app.tasks.video_processing import analyze_run_video
-
 router = APIRouter(prefix="/runs", tags=["runs"])
 
 
@@ -30,8 +27,6 @@ def create_run_record(
         db.add(new_run)
         db.commit()
         db.refresh(new_run)
-
-        queue.enqueue(analyze_run_video, args=(new_run.id, new_run.video_path))
 
         return new_run
 
