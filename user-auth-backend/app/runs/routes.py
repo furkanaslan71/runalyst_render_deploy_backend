@@ -6,7 +6,7 @@ from app.deps.auth import get_current_user
 from app.models.user import User
 from app.models.run import Run
 from .schemas import RunCreateIn, RunOut
-
+from app.services.queue_service import send_message_to_queue
 router = APIRouter(prefix="/runs", tags=["runs"])
 
 
@@ -23,10 +23,17 @@ def create_run_record(
             user_id=current_user.id
         )
 
+        new_run.status = "queued"
 
         db.add(new_run)
         db.commit()
         db.refresh(new_run)
+
+        message_to_send = {
+            "run_id": new_run.id,
+            "video_path": new_run.video_path
+        }
+        send_message_to_queue(message_body=message_to_send)
 
         return new_run
 

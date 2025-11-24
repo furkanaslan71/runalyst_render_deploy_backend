@@ -1,24 +1,73 @@
-# app/core/scheduler.py
-
 import asyncio
+import json
+
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import os
 import logging
+import boto3
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-from app.models.run import Run  # Make sure your models are accessible
+from app.models.run import Run
 
-
-# --- Database Setup ---
-# The scheduler runs in the same environment as the app, so it gets the same DB URL
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable not set.")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# SQS Client Setup
+sqs_client = boto3.client("sqs")
+SQS_QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
+
+
+def process_jobs_from_sqs():
+    """
+    Polls SQS for jobs, dispatches them, and deletes them from the queue.
+    """
+    if not SQS_QUEUE_URL:
+        logging.error("Scheduler: SQS_QUEUE_URL is not set.")
+        return
+
+    # Ask SQS for up to 5 messages. Wait up to 5 seconds for a message.
+    response = sqs_client.receive_message(
+        QueueUrl=SQS_QUEUE_URL,
+        MaxNumberOfMessages=5,
+        WaitTimeSeconds=5
+    )
+
+    messages = response.get("Messages", [])
+    if not messages:
+        logging.info("Scheduler: No new messages in SQS queue.")
+        return
+
+    for message in messages:
+        receipt_handle = message['ReceiptHandle']
+        try:
+            body = json.loads(message['Body'])
+            run_id = body.get("run_id")
+
+            logging.info(f"Scheduler: Found job in SQS for run_id: {run_id}")
+
+            # --- BOILERPLATE DISPATCH LOGIC ---
+            logging.info(f"--- SIMULATING DISPATCH for run_id {run_id} ---")
+
+            # CRITICAL: If dispatch is successful, delete the message from the queue
+            # so it isn't processed again.
+            sqs_client.delete_message(
+                QueueUrl=SQS_QUEUE_URL,
+                ReceiptHandle=receipt_handle
+            )
+            logging.info(f"--- DISPATCH SUCCESSFUL, deleted message for run_id {run_id} ---")
+
+        except Exception as e:
+            logging.error(f"Scheduler: Failed to process message. It will reappear in queue. Error: {e}")
+            # If we fail, we DON'T delete the message. SQS will make it visible again
+            # after a "visibility timeout" for another worker to try.
 
 
 def dispatch_one_pending_job():
@@ -36,9 +85,9 @@ def dispatch_one_pending_job():
         db.commit()
         print(f"Scheduler: Marked run_id {job.id} as 'dispatching'.")
 
-        # --- BOILERPLATE: The "Dispatch" Logic ---
+        # BOILERPLATE
         print(f"--- SIMULATING DISPATCH for run_id {job.id} ---")
-        # In the future, you would make a real HTTP request here.
+        # Later the real HTTP request here.
         # requests.post(...)
         print(f"--- DISPATCH SIMULATION SUCCESSFUL for run_id {job.id} ---")
 
@@ -51,13 +100,11 @@ def dispatch_one_pending_job():
 
 
 async def run_dispatcher_periodically():
-    print("Scheduler starting up...")
+    logging.info("Scheduler starting up...")
     while True:
         try:
-            dispatch_one_pending_job()
+            process_jobs_from_sqs()
         except Exception as e:
-            # This ensures the scheduler itself doesn't crash if the dispatch logic fails
-            print(f"Scheduler loop encountered an error: {e}")
+            logging.error(f"Scheduler loop encountered an error: {e}")
 
-        # Wait for 10 seconds before checking for new jobs again
         await asyncio.sleep(10)
