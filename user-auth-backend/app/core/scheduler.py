@@ -21,7 +21,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # SQS Client Setup
-sqs_client = boto3.client("sqs")
+AWS_REGION = os.environ.get("AWS_REGION")
+sqs_client = boto3.client("sqs", region_name=AWS_REGION)
 SQS_QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
 
 
