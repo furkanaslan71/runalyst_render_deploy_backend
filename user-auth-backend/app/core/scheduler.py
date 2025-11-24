@@ -4,8 +4,12 @@ import asyncio
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import os
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 from app.models.run import Run  # Make sure your models are accessible
+
 
 # --- Database Setup ---
 # The scheduler runs in the same environment as the app, so it gets the same DB URL
@@ -23,7 +27,8 @@ def dispatch_one_pending_job():
         job = db.query(Run).filter(Run.status == 'pending').with_for_update(skip_locked=True).first()
 
         if not job:
-            print("Scheduler: No pending jobs found.")
+            logging.info("Scheduler: No pending jobs found.")
+            #print("Scheduler: No pending jobs found.")
             return
 
         print(f"Scheduler: Found pending job for run_id: {job.id}")
@@ -38,7 +43,8 @@ def dispatch_one_pending_job():
         print(f"--- DISPATCH SIMULATION SUCCESSFUL for run_id {job.id} ---")
 
     except Exception as e:
-        print(f"Scheduler: An error occurred during dispatch: {e}")
+        #print(f"Scheduler: An error occurred during dispatch: {e}")
+        logging.info(f"Scheduler: An error occurred during dispatch: {e}")
         db.rollback()
     finally:
         db.close()
