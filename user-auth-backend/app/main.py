@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import db_ping
 from app.auth import routes as auth_router
 from app.runs import routes as runs_router
+from app.core.scheduler import run_dispatcher_periodically
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +20,7 @@ async def lifespan(app: FastAPI):
     print("✓ Database tables created/verified")
     print("✓ Application started")
 
+    dispatcher_task = asyncio.create_task(run_dispatcher_periodically())
     
     yield
     
