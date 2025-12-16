@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Request
 
 router = APIRouter(prefix="/model-results", tags=["model-results"])
 
+
 #GPU_SERVER_IP = os.getenv("GPU_SERVER_IP")
 
 @router.get("/get_result_upload_url", status_code=status.HTTP_200_OK)
