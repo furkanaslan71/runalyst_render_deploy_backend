@@ -71,34 +71,6 @@ def process_jobs_from_sqs():
             # after a "visibility timeout" for another worker to try.
 
 
-def dispatch_one_pending_job():
-    db = SessionLocal()
-    try:
-        job = db.query(Run).filter(Run.status == 'pending').with_for_update(skip_locked=True).first()
-
-        if not job:
-            logging.info("Scheduler: No pending jobs found.")
-            #print("Scheduler: No pending jobs found.")
-            return
-
-        print(f"Scheduler: Found pending job for run_id: {job.id}")
-        job.status = 'dispatching'
-        db.commit()
-        print(f"Scheduler: Marked run_id {job.id} as 'dispatching'.")
-
-        # BOILERPLATE
-        print(f"--- SIMULATING DISPATCH for run_id {job.id} ---")
-        # Later the real HTTP request here.
-        # requests.post(...)
-        print(f"--- DISPATCH SIMULATION SUCCESSFUL for run_id {job.id} ---")
-
-    except Exception as e:
-        #print(f"Scheduler: An error occurred during dispatch: {e}")
-        logging.info(f"Scheduler: An error occurred during dispatch: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
 
 async def run_dispatcher_periodically():
     logging.info("Scheduler starting up...")
